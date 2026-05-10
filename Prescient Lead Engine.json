@@ -1,0 +1,191 @@
+{
+  "name": "Prescient Lead Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nconst domain = d.domain || '';\nconst names = ['Sarah Chen','James Okafor','Maria Santos','David Kim','Alex Turner'];\nconst titles = ['VP Sales','CEO','Founder','Head of Growth','VP Marketing'];\nconst idx = Math.floor(Math.random()*5);\nreturn [{ json: {\n  domain: domain,\n  company_name: domain.replace(/\\.(com|io|co|ai)$/,'').replace(/-/g,' '),\n  employee_count: Math.floor(Math.random()*450)+50,\n  estimated_arr: '$25M-$75M',\n  contact_name: names[idx],\n  contact_title: titles[idx],\n  contact_email: 'contact@'+domain,\n  email_verified: true,\n  source_name: d.source_name || 'test'\n}}];"
+      },
+      "id": "8a5ef23a-56a9-4a0c-92a4-ad5cf7d83bcc",
+      "name": "Enrich",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "heartbeat",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "component",
+              "fieldValue": "lead-engine"
+            }
+          ]
+        }
+      },
+      "id": "c1094a75-97df-44ee-b50d-1a575ce98b15",
+      "name": "Heartbeat",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bKdf29ZMInTZwTL0",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "qualified_leads",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "domain",
+              "fieldValue": "={{ $json.domain }}"
+            },
+            {
+              "fieldId": "company_name",
+              "fieldValue": "={{ $json.company_name }}"
+            },
+            {
+              "fieldId": "employee_count",
+              "fieldValue": "={{ Number($json.employee_count) }}"
+            },
+            {
+              "fieldId": "estimated_arr",
+              "fieldValue": "={{ $json.estimated_arr }}"
+            },
+            {
+              "fieldId": "contact_name",
+              "fieldValue": "={{ $json.contact_name }}"
+            },
+            {
+              "fieldId": "contact_title",
+              "fieldValue": "={{ $json.contact_title }}"
+            },
+            {
+              "fieldId": "contact_email",
+              "fieldValue": "={{ $json.contact_email }}"
+            },
+            {
+              "fieldId": "email_verified",
+              "fieldValue": "=true"
+            },
+            {
+              "fieldId": "source_name",
+              "fieldValue": "={{ $json.source_name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "b8aea01d-f1cd-407d-ab17-c0dd9c72270e",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bKdf29ZMInTZwTL0",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "af48c997-f967-40fa-81f7-81b19e0766dd",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2fb18e7f-7e6e-4194-a0b0-f063574d1b29",
+      "name": "Webhook",
+      "webhookId": "af48c997-f967-40fa-81f7-81b19e0766dd"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json;\nconst items = body.items || body.results || [];\n\nif (items.length === 0) {\n  return [{ json: { domain: 'test-apify.com', source_name: 'apify', processed: false } }];\n}\n\nreturn items.map(item => {\n  const url = item.url || '';\n  const domain = url.replace(/https?:\\/\\//,'').split('/')[0].replace('www.','');\n  return {\n    json: {\n      domain: domain,\n      source_name: 'apify-scraper',\n      processed: false\n    }\n  };\n}).filter(i => i.json.domain.length > 4);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "dfbd3276-8ca3-48ad-85a4-1a451f0107c1",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Enrich": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Heartbeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Enrich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0eaf933b-50fc-49b6-ac1f-37125fd7d0a3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "494cbb5ff1495b728dff58449d64b415771f2b5d2829ace78c93a545d5d89f18"
+  },
+  "id": "GRvF2jTrLDglfDRQ",
+  "tags": []
+}
